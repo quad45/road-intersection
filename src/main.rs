@@ -4,12 +4,12 @@ mod road;
 mod traffic_light;
 mod vehicle;
 
+use rand::Rng;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use std::collections::HashMap;
 use std::time::Duration;
-use rand::Rng;
 
 use traffic_light::{LightState, TrafficLight};
 use vehicle::{Direction, Vehicle};
@@ -85,7 +85,7 @@ fn main() -> Result<(), String> {
                                 _ => unreachable!(),
                             };
                             res
-                        },
+                        }
                         Keycode::Escape => break 'running,
                         _ => None,
                     };
@@ -102,35 +102,44 @@ fn main() -> Result<(), String> {
         }
 
         n += 1;
-        if n as f32 > green_timer * 150. {
-            n = 0;
-             let direction = match current_light {
-                0 => Direction::South,
-                1 => Direction::West,
-                2 => Direction::North,
-                3 => Direction::East,
-                _ => unreachable!(),
-            };
-            // println!("{} {} {} {} {:?}", green_timer, green_timer * 150., n, current_light, direction);
-
-            green_timer = get_timer(&vehicles, direction);
+        let last_direction = match current_light {
+            0 => Direction::South,
+            1 => Direction::West,
+            2 => Direction::North,
+            3 => Direction::East,
+            _ => unreachable!(),
+        };
+        if is_road_empty(&vehicles, last_direction) || n as f32 > green_timer * 150. {
             // Turn all lights red
             light_n.update(false);
             light_s.update(false);
             light_e.update(false);
             light_w.update(false);
 
-            if green_timer != 0. {
-                match current_light {
-                    0 => light_n.update(true),
-                    1 => light_e.update(true),
-                    2 => light_s.update(true),
-                    3 => light_w.update(true),
+            if !is_intesection_full(&vehicles) {
+                current_light = (current_light + 1) % 4;
+                let direction = match current_light {
+                    0 => Direction::South,
+                    1 => Direction::West,
+                    2 => Direction::North,
+                    3 => Direction::East,
                     _ => unreachable!(),
                 };
-            }
 
-            current_light = (current_light + 1) % 4;
+                // println!("{} {} {} {} {:?}", green_timer, green_timer * 150., n, current_light, direction);
+
+                green_timer = get_timer(&vehicles, direction);
+                if green_timer != 0. {
+                    match current_light {
+                        0 => light_n.update(true),
+                        1 => light_e.update(true),
+                        2 => light_s.update(true),
+                        3 => light_w.update(true),
+                        _ => unreachable!(),
+                    };
+                }
+                n = 0;
+            }
         }
 
         // Compute tentative positions (with traffic light checks)
@@ -190,7 +199,6 @@ fn main() -> Result<(), String> {
             }
         }
 
-
         let mut collisions = vec![false; tentatives.len()];
         for i in 0..tentatives.len() {
             for j in (i + 1)..tentatives.len() {
@@ -219,8 +227,8 @@ fn main() -> Result<(), String> {
         canvas.set_draw_color(Color::RGB(20, 40, 20));
         canvas.clear();
 
-        let road_ns = Road::new(350, 0, 100, 800, true); // North‑South road 
-        let road_ew = Road::new(0, 350, 800, 100, false); // East‑West road 
+        let road_ns = Road::new(350, 0, 100, 800, true); // North‑South road
+        let road_ew = Road::new(0, 350, 800, 100, false); // East‑West road
         road_ns.draw(&mut canvas);
         road_ew.draw(&mut canvas);
         intersection::draw(&mut canvas);
@@ -252,8 +260,8 @@ fn is_safe_to_spawn(
 
     let (spawn_coord, is_vertical) = match direction {
         Direction::North => (760, true),
-        Direction::South => (80, true), 
-        Direction::East => (80, false), 
+        Direction::South => (80, true),
+        Direction::East => (80, false),
         Direction::West => (760, false),
     };
 
@@ -293,4 +301,13 @@ fn get_timer(vehicles: &[Vehicle], direction: Direction) -> f32 {
         }
     }
     (cars_count as f32 * 1.55) / (SINGLE_ROAD_PART / (VEHICULE_LENGTH + SAFE_DISTANCE)) as f32
+}
+
+fn is_intesection_full(vehicles: &[Vehicle]) -> bool {
+    for car in vehicles {
+        if car.in_intersection {
+            return true;
+        }
+    }
+    false
 }
