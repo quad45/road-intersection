@@ -61,19 +61,8 @@ impl Vehicle {
         if !self.in_intersection && !self.has_turned && self.should_stop_at_light(light_state) {
             return;
         }
-        if !self.has_turned && !self.in_intersection {
-            // Detect entry into intersection bounds (e.g., 350 <= x/y <= 450)
-            let in_intersection = match self.direction {
-                Direction::North => self.rect.y() <= 450,
-                Direction::South => self.rect.y() + self.rect.height() as i32 >= 350,
-                Direction::East => self.rect.x() + self.rect.width() as i32 >= 350,
-                Direction::West => self.rect.x() <= 450,
-            };
+        self.in_intersection = self.rect.y() + self.rect.height() as i32 >= 350 && self.rect.y() <= 450 && self.rect.x() + self.rect.width() as i32 >= 350 && self.rect.x() <= 450;
 
-            if in_intersection {
-                self.in_intersection = true;
-            }
-        }
         if !self.has_turned {
             let turn_point = match (self.direction, self.turn) {
                 // Left turns
