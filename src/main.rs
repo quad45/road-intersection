@@ -311,3 +311,12 @@ fn is_intesection_full(vehicles: &[Vehicle]) -> bool {
     }
     false
 }
+
+fn is_road_empty(vehicles: &[Vehicle], direction: Direction) -> bool {
+    for car in vehicles {
+        if car.direction == direction && !car.in_intersection && !car.has_turned {
+            return false;
+        }
+    }
+    true
+}
